@@ -10,24 +10,29 @@ This is an n8n community node that provides integration with CTERA AI MCP (Model
 
 For n8n version 0.187.0 and above, you can install this node directly from npm:
 
+#### Standard Installation
+
 ```bash
 npm install -g @ctera/n8n-nodes-ctera-ai
 ```
 
 Then restart your n8n instance.
 
-For docker-based n8n installations, add this environment variable:
+#### Docker Installation
+
+For Docker-based n8n installations:
 
 ```bash
-N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
+# Install the node inside the running container
+docker exec -it <container-name> npm install -g @ctera/n8n-nodes-ctera-ai
+
+# Restart the container
+docker restart <container-name>
 ```
 
-And install using:
+Replace `<container-name>` with your actual container name (e.g., `n8n`, `n8n_n8n_1`).
 
-```bash
-docker exec -it n8n npm install -g @ctera/n8n-nodes-ctera-ai
-docker restart n8n
-```
+**Note**: The node will persist across container restarts but will need to be reinstalled if the container is recreated. To make it permanent, consider creating a custom Docker image or using volume mounts.
 
 ### Manual Installation (Development)
 
@@ -202,6 +207,10 @@ npm run dev
 npm run lint
 npm run lintfix
 ```
+
+### Publishing
+
+For maintainers publishing new versions to npm, see [PUBLISH.md](PUBLISH.md) for detailed instructions.
 
 ## Version History
 

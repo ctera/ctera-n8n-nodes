@@ -21,18 +21,23 @@ Then restart n8n. The **CTERA Data Intelligence** node will appear in your node 
 
 ## Credentials
 
-**1. Generate a Bearer Token:**
+**1. Log into Admin UI** with your SSO credentials
+
+**2. Generate MCP Bearer Token:**
+
+Navigate to the MCP Tokens section in Admin UI, or use the API:
 
 ```bash
-curl -k "https://YOUR_MCP_SERVER/api/tokens/generate?oid=YOUR_OID&email=YOUR_EMAIL" | jq -r .token
+curl -k -X POST "https://YOUR_ADMIN_URL/admin/api/mcp-tokens/generate" \
+  -H "Cookie: connect.sid=YOUR_SESSION_COOKIE" \
+  -H "Content-Type: application/json" \
+  -d '{"days": 30}' | jq -r .token
 ```
 
-Find your OID in the Admin UI under your user profile, or decode it from your JWT token.
-
-**2. Configure in n8n:**
+**3. Configure in n8n:**
 
 - **MCP Server URL**: `https://mcp.your-domain.com`
-- **Bearer Token**: Paste the token from step 1
+- **Bearer Token**: Paste the token from step 2
 - **Ignore SSL Issues**: Enable for self-signed certificates
 
 ## Example Use Cases
@@ -44,7 +49,6 @@ Find your OID in the Admin UI under your user profile, or decode it from your JW
 ## Resources
 
 - [n8n Community Nodes](https://docs.n8n.io/integrations/community-nodes/)
-- [CTERA AI MCP Architecture](https://cteranet.atlassian.net/wiki/spaces/AI/pages/4757454995)
 - [GitHub Issues](https://github.com/ctera/ctera-n8n-nodes/issues)
 
 ## License

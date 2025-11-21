@@ -200,47 +200,49 @@ export class CteraAi implements INodeType {
 					id: i + 1,
 				};
 
-				// Make the HTTP request
-				const response = await this.helpers.httpRequest({
-					method: 'POST',
-					url: serverUrl,
-					headers: {
-						'Content-Type': 'application/json',
-						'Authorization': `Bearer ${bearerToken}`,
-					},
-					body: requestBody,
-					json: true,
-					skipSslCertificateValidation: allowUnauthorizedCerts,
-				});
+			// Make the HTTP request
+			const response = await this.helpers.httpRequest({
+				method: 'POST',
+				url: serverUrl,
+				headers: {
+					'Content-Type': 'application/json',
+					'Authorization': `Bearer ${bearerToken}`,
+				},
+				body: JSON.stringify(requestBody),
+				skipSslCertificateValidation: allowUnauthorizedCerts,
+			});
 
-				// Handle MCP error responses
-				if (response.error) {
-					throw new NodeOperationError(
-						this.getNode(),
-						`MCP Error: ${response.error.message || JSON.stringify(response.error)}`,
-						{ itemIndex: i },
-					);
-				}
+			// Parse JSON response
+			const parsedResponse = typeof response === 'string' ? JSON.parse(response) : response;
 
-				// Parse the result from MCP response
-				let result: any;
-				if (response.result && response.result.content) {
-					// MCP returns content array
-					const content = response.result.content[0];
-					if (content && content.type === 'text') {
-						try {
-							// Try to parse as JSON if it looks like JSON
-							result = JSON.parse(content.text);
-						} catch {
-							// If not JSON, return as text
-							result = content.text;
-						}
-					} else {
-						result = content;
+			// Handle MCP error responses
+			if (parsedResponse.error) {
+				throw new NodeOperationError(
+					this.getNode(),
+					`MCP Error: ${parsedResponse.error.message || JSON.stringify(parsedResponse.error)}`,
+					{ itemIndex: i },
+				);
+			}
+
+			// Parse the result from MCP response
+			let result: any;
+			if (parsedResponse.result && parsedResponse.result.content) {
+				// MCP returns content array
+				const content = parsedResponse.result.content[0];
+				if (content && content.type === 'text') {
+					try {
+						// Try to parse as JSON if it looks like JSON
+						result = JSON.parse(content.text);
+					} catch {
+						// If not JSON, return as text
+						result = content.text;
 					}
 				} else {
-					result = response.result;
+					result = content;
 				}
+			} else {
+				result = parsedResponse.result;
+			}
 
 				returnData.push({
 					json: {

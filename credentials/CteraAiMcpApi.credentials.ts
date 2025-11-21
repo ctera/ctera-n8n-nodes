@@ -6,7 +6,7 @@ import {
 export class CteraAiMcpApi implements ICredentialType {
 	name = 'cteraAiMcpApi';
 	displayName = 'CTERA AI MCP API';
-	documentationUrl = 'https://cteranet.atlassian.net/wiki/spaces/AI/pages/4757454995';
+	documentationUrl = 'https://github.com/ctera/ctera-n8n-nodes#readme';
 	properties: INodeProperties[] = [
 		{
 			displayName: 'MCP Server URL',

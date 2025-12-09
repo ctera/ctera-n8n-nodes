@@ -156,7 +156,6 @@ export class CteraAi implements INodeType {
 				if (operation === 'listExperts') {
 					toolName = 'ctera_list_experts';
 					serverUrl = `${mcpServerUrl}/mcp-bearer`;
-					// No parameters needed
 				} else if (operation === 'search') {
 					toolName = 'expert_semantic_search';
 					serverUrl = this.getNodeParameter('expertEndpointUrl', i) as string;
@@ -246,10 +245,10 @@ export class CteraAi implements INodeType {
 
 				returnData.push({
 					json: {
+						...items[i].json,
 						operation,
 						toolName,
 						result,
-						...items[i].json,
 					},
 					pairedItem: { item: i },
 				});
@@ -257,8 +256,8 @@ export class CteraAi implements INodeType {
 				if (this.continueOnFail()) {
 					returnData.push({
 						json: {
-							error: (error as Error).message,
 							...items[i].json,
+							error: (error as Error).message,
 						},
 						pairedItem: { item: i },
 					});

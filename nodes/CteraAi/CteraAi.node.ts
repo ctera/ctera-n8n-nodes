@@ -57,6 +57,11 @@ export class CteraAi implements INodeType {
 						description: 'Retrieve raw text chunks for Retrieval-Augmented Generation',
 					},
 					{
+						name: 'File Search (Files & Metadata)',
+						value: 'fileSearch',
+						description: 'Search files and return metadata with optional snippets',
+					},
+					{
 						name: 'Chat (Generative Answer)',
 						value: 'chat',
 						description: 'Get a direct, generated answer from the expert',
@@ -133,6 +138,80 @@ export class CteraAi implements INodeType {
 					},
 				],
 			},
+			{
+				displayName: 'File Search Options',
+				name: 'fileSearchOptions',
+				type: 'collection',
+				placeholder: 'Add Option',
+				default: {},
+				displayOptions: {
+					show: {
+						operation: ['fileSearch'],
+					},
+				},
+				options: [
+					{
+						displayName: 'Limit',
+						name: 'limit',
+						type: 'number',
+						default: 100,
+						description: 'Maximum number of results to return',
+						typeOptions: {
+							minValue: 1,
+							maxValue: 250,
+						},
+					},
+					{
+						displayName: 'Offset',
+						name: 'offset',
+						type: 'number',
+						default: 0,
+						description: 'Pagination offset',
+						typeOptions: {
+							minValue: 0,
+						},
+					},
+					{
+						displayName: 'Sort By',
+						name: 'sort_by',
+						type: 'options',
+						options: [
+							{
+								name: 'Relevance',
+								value: 'relevance',
+							},
+							{
+								name: 'Modified Date',
+								value: 'modified_at',
+							},
+							{
+								name: 'Created Date',
+								value: 'created_at',
+							},
+							{
+								name: 'Name',
+								value: 'name',
+							},
+						],
+						default: 'relevance',
+						description: 'Sort order for results',
+					},
+					{
+						displayName: 'Include Snippet',
+						name: 'include_snippet',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to return text snippet per file',
+					},
+					{
+						displayName: 'Include Markdown',
+						name: 'include_markdown',
+						type: 'boolean',
+						default: false,
+						description: 'Whether to return full markdown body per file',
+					},
+				],
+			},
 		],
 	};
 
@@ -175,6 +254,29 @@ export class CteraAi implements INodeType {
 					}
 					if (additionalOptions.window_size) {
 						params.window_size = additionalOptions.window_size;
+					}
+				} else if (operation === 'fileSearch') {
+					toolName = 'expert_file_search';
+					serverUrl = this.getNodeParameter('expertEndpointUrl', i) as string;
+					const query = this.getNodeParameter('query', i) as string;
+					const fileSearchOptions = this.getNodeParameter('fileSearchOptions', i, {}) as any;
+
+					params.query = query;
+
+					if (fileSearchOptions.limit !== undefined) {
+						params.limit = fileSearchOptions.limit;
+					}
+					if (fileSearchOptions.offset !== undefined) {
+						params.offset = fileSearchOptions.offset;
+					}
+					if (fileSearchOptions.sort_by) {
+						params.sort_by = fileSearchOptions.sort_by;
+					}
+					if (fileSearchOptions.include_snippet !== undefined) {
+						params.include_snippet = fileSearchOptions.include_snippet;
+					}
+					if (fileSearchOptions.include_markdown !== undefined) {
+						params.include_markdown = fileSearchOptions.include_markdown;
 					}
 				} else if (operation === 'chat') {
 					toolName = 'expert_chat';
@@ -243,15 +345,68 @@ export class CteraAi implements INodeType {
 				result = parsedResponse.result;
 			}
 
-				returnData.push({
-					json: {
-						...items[i].json,
-						operation,
-						toolName,
-						result,
-					},
-					pairedItem: { item: i },
-				});
+				// Handle fileSearch with fan-out pattern - each hit becomes a separate item
+				if (operation === 'fileSearch' && result && result.hits && Array.isArray(result.hits)) {
+					// Map snake_case to camelCase for n8n conventions
+					for (const hit of result.hits) {
+						returnData.push({
+							json: {
+								...items[i].json,
+								operation,
+								toolName,
+								// Map to camelCase field names
+								fileId: hit.id,
+								name: hit.name,
+								path: hit.path,
+								sizeBytes: hit.size_bytes,
+								mimeType: hit.mime_type,
+								createdAt: hit.created_at,
+								modifiedAt: hit.modified_at,
+								storageSystem: hit.storage_system,
+								bucketOrShare: hit.bucket_or_share,
+								score: hit.score,
+								standardMetadata: hit.standard_metadata,
+								customMetadata: hit.custom_metadata,
+								snippet: hit.snippet,
+								markdownBody: hit.markdown_body,
+								// Include pagination info from response
+								_meta: {
+									total: result.total,
+									limit: result.limit,
+									offset: result.offset,
+								},
+							},
+							pairedItem: { item: i },
+						});
+					}
+					// If no hits, still return an item indicating empty results
+					if (result.hits.length === 0) {
+						returnData.push({
+							json: {
+								...items[i].json,
+								operation,
+								toolName,
+								result: [],
+								_meta: {
+									total: result.total || 0,
+									limit: result.limit || 0,
+									offset: result.offset || 0,
+								},
+							},
+							pairedItem: { item: i },
+						});
+					}
+				} else {
+					returnData.push({
+						json: {
+							...items[i].json,
+							operation,
+							toolName,
+							result,
+						},
+						pairedItem: { item: i },
+					});
+				}
 			} catch (error) {
 				if (this.continueOnFail()) {
 					returnData.push({
